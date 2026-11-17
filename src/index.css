@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-surface text-text font-sans;
+    font-size: 16px;
+  }
+  * { @apply scroll-smooth; }
+}
+
+@layer utilities {
+  .hex-block { @apply font-mono text-xs; }
+}
