@@ -69,7 +69,7 @@ async function testNIST_CBC(): Promise<TestResult> {
     const expected = fromHex('7649abac8119b246cee98e9b12e9197d');
     const key = await importKeyForMode(keyBytes, 'CBC');
     // Encrypt single block — Web Crypto will add PKCS7 pad (1 extra block)
-    const ctBuf = await crypto.subtle.encrypt({ name: 'AES-CBC', iv }, key, pt);
+    const ctBuf = await crypto.subtle.encrypt({ name: 'AES-CBC', iv: iv as BufferSource }, key, pt as BufferSource);
     const ct = new Uint8Array(ctBuf);
     const block1 = ct.slice(0, 16);
     const passed = hexEqual(block1, expected);
@@ -92,8 +92,9 @@ async function testNIST_CTR(): Promise<TestResult> {
     const expected = fromHex('874d6191b620e3261bef6864990db6ce');
     const key = await importKeyForMode(keyBytes, 'CTR');
     const ctBuf = await crypto.subtle.encrypt(
-      { name: 'AES-CTR', counter, length: 32 },
-      key, pt
+      { name: 'AES-CTR', counter: counter as BufferSource, length: 32 },
+      key,
+      pt as BufferSource
     );
     const ct = new Uint8Array(ctBuf);
     const passed = hexEqual(ct, expected);
@@ -122,7 +123,6 @@ async function testRoundTrips(): Promise<TestResult[]> {
 
   for (const mode of modes) {
     for (const tc of testCases) {
-      // ECB doesn't support empty input cleanly, skip empty for ECB
       if (mode === 'ECB' && tc.data.length === 0) continue;
       try {
         const enc = await aesEncrypt(mode, keyBytes, tc.data);

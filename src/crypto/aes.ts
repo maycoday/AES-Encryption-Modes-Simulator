@@ -58,7 +58,7 @@ export async function exportKeyBytes(key: CryptoKey): Promise<Uint8Array> {
 
 export async function importKeyForMode(keyBytes: Uint8Array, mode: Exclude<AESMode, 'ECB'>): Promise<CryptoKey> {
   const name = getAlgoName(mode);
-  return crypto.subtle.importKey('raw', keyBytes, { name }, false, ['encrypt', 'decrypt']);
+  return crypto.subtle.importKey('raw', keyBytes as BufferSource, { name }, false, ['encrypt', 'decrypt']);
 }
 
 // Raw single block AES encrypt E_K(block) using fresh noble instance
@@ -133,7 +133,7 @@ export async function aesEncrypt(
   if (mode === 'CBC') {
     const iv = randomIV();
     const key = await importKeyForMode(keyBytes, 'CBC');
-    const ctBuf = await crypto.subtle.encrypt({ name: 'AES-CBC', iv }, key, plaintext);
+    const ctBuf = await crypto.subtle.encrypt({ name: 'AES-CBC', iv: iv as BufferSource }, key, plaintext as BufferSource);
     const ciphertext = new Uint8Array(ctBuf);
     const paddingBytes = ciphertext.length - plaintext.length;
     return { ciphertext, iv, paddingBytes, blocks: chunkBytes(ciphertext), mode, keySize };
@@ -145,9 +145,9 @@ export async function aesEncrypt(
     counterBlock.set(nonce, 0);
     const key = await importKeyForMode(keyBytes, 'CTR');
     const ctBuf = await crypto.subtle.encrypt(
-      { name: 'AES-CTR', counter: counterBlock, length: 32 },
+      { name: 'AES-CTR', counter: counterBlock as BufferSource, length: 32 },
       key,
-      plaintext
+      plaintext as BufferSource
     );
     const ciphertext = new Uint8Array(ctBuf);
     return { ciphertext, nonce, paddingBytes: 0, blocks: chunkBytes(ciphertext), mode, keySize };
@@ -158,16 +158,16 @@ export async function aesEncrypt(
   const key = await importKeyForMode(keyBytes, 'GCM');
   const gcmParams: AesGcmParams = {
     name: 'AES-GCM',
-    iv: nonce,
+    iv: nonce as BufferSource,
     tagLength: 128,
   };
   if (aad && aad.byteLength > 0) {
-    gcmParams.additionalData = aad;
+    gcmParams.additionalData = aad as BufferSource;
   }
   const ctBuf = await crypto.subtle.encrypt(
     gcmParams,
     key,
-    plaintext
+    plaintext as BufferSource
   );
   const full = new Uint8Array(ctBuf);
   const tag = full.slice(full.length - 16);
@@ -190,7 +190,7 @@ export async function aesDecrypt(
     if (mode === 'CBC') {
       if (!options?.iv) throw new Error('IV required for CBC');
       const key = await importKeyForMode(keyBytes, 'CBC');
-      const ptBuf = await crypto.subtle.decrypt({ name: 'AES-CBC', iv: options.iv }, key, ciphertext);
+      const ptBuf = await crypto.subtle.decrypt({ name: 'AES-CBC', iv: options.iv as BufferSource }, key, ciphertext as BufferSource);
       return { plaintext: new Uint8Array(ptBuf), valid: true };
     }
 
@@ -200,9 +200,9 @@ export async function aesDecrypt(
       counterBlock.set(options.nonce, 0);
       const key = await importKeyForMode(keyBytes, 'CTR');
       const ptBuf = await crypto.subtle.decrypt(
-        { name: 'AES-CTR', counter: counterBlock, length: 32 },
+        { name: 'AES-CTR', counter: counterBlock as BufferSource, length: 32 },
         key,
-        ciphertext
+        ciphertext as BufferSource
       );
       return { plaintext: new Uint8Array(ptBuf), valid: true };
     }
@@ -216,16 +216,16 @@ export async function aesDecrypt(
     try {
       const gcmParams: AesGcmParams = {
         name: 'AES-GCM',
-        iv: options.nonce,
+        iv: options.nonce as BufferSource,
         tagLength: 128,
       };
       if (options?.aad && options.aad.byteLength > 0) {
-        gcmParams.additionalData = options.aad;
+        gcmParams.additionalData = options.aad as BufferSource;
       }
       const ptBuf = await crypto.subtle.decrypt(
         gcmParams,
         key,
-        full
+        full as BufferSource
       );
       return { plaintext: new Uint8Array(ptBuf), valid: true };
     } catch {
